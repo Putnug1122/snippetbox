@@ -14,6 +14,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		app.notFound(w)
 		return
 	}
+
 	snippets, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(w, err)
@@ -25,9 +26,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// files := []string{
-	// 	"./ui/html/base.tmpl",
-	// 	"./ui/html/pages/home.tmpl",
-	// 	"./ui/html/partials/nav.tmpl",
+	// 	"./ui/html/base.go.tmpl",
+	// 	"./ui/html/pages/home.go.tmpl",
+	// 	"./ui/html/partials/nav.go.tmpl",
 	// }
 
 	// ts, err := template.ParseFiles(files...)
