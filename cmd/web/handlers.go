@@ -12,10 +12,10 @@ import (
 )
 
 type snipperCreateForm struct {
-	Title   string
-	Content string
-	Expires int
-	validator.Validator
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	Expires             int    `form:"expires"`
+	validator.Validator `form:"-"`
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -70,27 +70,24 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
 
-	err := r.ParseForm()
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-	}
+	var form snipperCreateForm
 
-	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	err := app.decodePostForm(r, &r.PostForm)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	form := snipperCreateForm{
-		Title:   r.PostForm.Get("title"),
-		Content: r.PostForm.Get("content"),
-		Expires: expires,
+	err = app.formDecoder.Decode(&form, r.PostForm)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
 	}
 
-	form.CheckField(validator.NotBlank(r.PostForm.Get("title")), "title", "This field cannot be blank")
-	form.CheckField(validator.MaxChars(r.PostForm.Get("title"), 100), "title", "This field is too long (maximum is 100 characters)")
-	form.CheckField(validator.NotBlank(r.PostForm.Get("content")), "content", "This field cannot be blank")
-	form.CheckField(validator.PermittedInt(expires, 1, 7, 365), "expires", "This field is must equal to 1, 7, and 365")
+	form.CheckField(validator.NotBlank(form.Title), "title", "This field cannot be blank")
+	form.CheckField(validator.MaxChars(form.Title, 100), "title", "This field is too long (maximum is 100 characters)")
+	form.CheckField(validator.NotBlank(form.Content), "content", "This field cannot be blank")
+	form.CheckField(validator.PermittedInt(form.Expires, 1, 7, 365), "expires", "This field is must equal to 1, 7, and 365")
 
 	if !form.Valid() {
 		data := app.newTemplateData(r)
