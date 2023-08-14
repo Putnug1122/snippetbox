@@ -5,18 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/putnug1122/snippetbox/internal/models"
+	"github.com/putnug1122/snippetbox/internal/validator"
 )
 
 type snipperCreateForm struct {
-	Title       string
-	Content     string
-	Expires     int
-	FieldErrors map[string]string
+	Title   string
+	Content string
+	Expires int
+	validator.Validator
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -83,27 +82,17 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 	}
 
 	form := snipperCreateForm{
-		Title:       r.PostForm.Get("title"),
-		Content:     r.PostForm.Get("content"),
-		Expires:     expires,
-		FieldErrors: map[string]string{},
+		Title:   r.PostForm.Get("title"),
+		Content: r.PostForm.Get("content"),
+		Expires: expires,
 	}
 
-	if strings.TrimSpace(form.Title) == "" {
-		form.FieldErrors["title"] = "This field cannot be blank"
-	} else if utf8.RuneCountInString(form.Title) > 100 {
-		form.FieldErrors["title"] = "This field is too long (maximum is 100 characters)"
-	}
+	form.CheckField(validator.NotBlank(r.PostForm.Get("title")), "title", "This field cannot be blank")
+	form.CheckField(validator.MaxChars(r.PostForm.Get("title"), 100), "title", "This field is too long (maximum is 100 characters)")
+	form.CheckField(validator.NotBlank(r.PostForm.Get("content")), "content", "This field cannot be blank")
+	form.CheckField(validator.PermittedInt(expires, 1, 7, 365), "expires", "This field is must equal to 1, 7, and 365")
 
-	if strings.TrimSpace(form.Content) == "" {
-		form.FieldErrors["content"] = "This field cannot be blank"
-	}
-
-	if expires != 1 && expires != 7 && expires != 365 {
-		form.FieldErrors["expires"] = "This field is must equal to 1, 7, and 365"
-	}
-
-	if len(form.FieldErrors) > 0 {
+	if !form.Valid() {
 		data := app.newTemplateData(r)
 		data.Form = form
 		app.render(w, http.StatusUnprocessableEntity, "create.go.tmpl", data)
