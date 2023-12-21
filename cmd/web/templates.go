@@ -2,10 +2,12 @@ package main
 
 import (
 	"html/template"
+	"io/fs"
 	"path/filepath"
 	"time"
 
 	"github.com/putnug1122/snippetbox/internal/models"
+	"github.com/putnug1122/snippetbox/ui"
 )
 
 type templateData struct {
@@ -29,7 +31,7 @@ var function = template.FuncMap{
 func newTemplateCache() (map[string]*template.Template, error) {
 	cache := map[string]*template.Template{}
 
-	pages, err := filepath.Glob("./ui/html/pages/*.go.tmpl")
+	pages, err := fs.Glob(ui.Files, "html/pages/*.go.tmpl")
 	if err != nil {
 		return nil, err
 	}
@@ -37,20 +39,27 @@ func newTemplateCache() (map[string]*template.Template, error) {
 	for _, page := range pages {
 
 		name := filepath.Base(page)
-		ts, err := template.New(name).Funcs(function).ParseFiles("./ui/html/base.go.tmpl")
+
+		pattern := []string{
+			"html/base.go.tmpl",
+			"html/partials/*.go.tmpl",
+			page,
+		}
+
+		ts, err := template.New(name).Funcs(function).ParseFS(ui.Files, pattern...)
 		if err != nil {
 			return nil, err
 		}
 
-		ts, err = ts.ParseGlob("./ui/html/partials/*.go.tmpl")
-		if err != nil {
-			return nil, err
-		}
+		// ts, err = ts.ParseGlob("./ui/html/partials/*.go.tmpl")
+		// if err != nil {
+		// 	return nil, err
+		// }
 
-		ts, err = ts.ParseFiles(page)
-		if err != nil {
-			return nil, err
-		}
+		// ts, err = ts.ParseFiles(page)
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		cache[name] = ts
 	}
